@@ -8,45 +8,62 @@ const SALT_ROUNDS = 10;
 const hashPassword = (password: string) => bcrypt.hash(password, SALT_ROUNDS);
 const verifyPassword = (password: string, hash: string) => bcrypt.compare(password, hash);
 
-const beforeSave = async (user: any) => {
-    if (!user.password) return Promise.resolve(user);
-    return hashPassword(user.password)
-        .then(hash => ({ ...user, password: hash }))
-        .catch(err => `Error hashing password: ${err}`);
-};
-
 export const User = {
-    create: async (data: any) => {
-        data = await beforeSave(data);
-        delete data.id;
+    create: async function (data: UserCreateInput) {
+        data.password = await hashPassword(data.password);
         return knex.insert(data).returning(selectableProps).into(tableName);
     },
 
-    findAll: () => knex.select(selectableProps).from(tableName),
+    findAll: function (): Promise<User[]> {
+        return knex.select(selectableProps).from(tableName);
+    },
 
-    findById: (id: number) => knex.select(selectableProps).from(tableName).where({ id }),
+    findByEmail: function (email: string): Promise<User> {
+        return knex.select(selectableProps).from(tableName).where({ email }).first();
+    },
 
-    update: (id: number, data: any) => {
+    findById: function (id: number): Promise<User> {
+        return knex.select(selectableProps).from(tableName).where({ id }).first();
+    },
+
+    update: function (id: number, data: UserUpdateInput): Promise<User> {
         delete data.id;
         return knex.update(data).from(tableName).where({ id }).returning(selectableProps);
     },
 
-    destroy: (id: number) => knex.del().from(tableName).where({ id }),
+    destroy: function (id: number): Promise<number> {
+        return knex.del().from(tableName).where({ id });
+    },
 
-    verify: async (username: string, password: string) => {
+    verify: async function (email: string, password: string) {
         const matchErrorMsg = "Username or password do not match";
-        return knex
-            .select()
-            .from(tableName)
-            .where({ username })
-            .then(user => {
-                if (!user) throw matchErrorMsg;
-                return user;
-            })
-            .then((user: any) => Promise.all([user, verifyPassword(password, user.password)]))
-            .then(([user, isMatch]) => {
-                if (!isMatch) throw matchErrorMsg;
-                return user;
-            });
+        const user = await knex.select(["password"]).from(tableName).where({ email }).first();
+        if (!user || !verifyPassword(password, user.password)) throw matchErrorMsg;
+        return user;
     },
 };
+
+export interface User {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface UserCreateInput {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+}
+
+export interface UserUpdateInput {
+    id?: number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    password?: string;
+}

@@ -1,10 +1,9 @@
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { User } from "~/models/user.server";
+import { authenticator } from "~/auth.server";
 
-export const loader: LoaderFunction = async () => {
-    const users = await User.findAll();
-    console.log(users);
-    return json(null);
+export const loader: LoaderFunction = async ({ request }) => {
+    const user = await authenticator.isAuthenticated(request);
+    return json({ user });
 };
 
 export const meta: MetaFunction = () => {
