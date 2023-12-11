@@ -1,10 +1,4 @@
-import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { authenticator } from "~/auth.server";
-
-export const loader: LoaderFunction = async ({ request }) => {
-    const user = await authenticator.isAuthenticated(request);
-    return json({ user });
-};
+import { type MetaFunction } from "@remix-run/node";
 
 export const meta: MetaFunction = () => {
     return [{ title: "New Remix App" }, { name: "description", content: "Welcome to Remix!" }];
